@@ -7,7 +7,9 @@ import java.util.Stack;
 
 public class Main {
 
-	
+	/**
+	 * @param args
+	 */
 	public static void main(String[] args) {
 
 		Graph g = new ListGraph(10, false);
@@ -16,7 +18,7 @@ public class Main {
 		// 1: Wien
 		// 2: Klagenfurt
 		// 3: Salzburg
-		// 4: Innschbruck
+		// 4: Inschbruck
 		// 5: St. Pölten
 		// 6: Linz
 		
@@ -29,18 +31,16 @@ public class Main {
 		g.addEdge(2, 4, 200);
 		g.addEdge(0, 4, 1000);
 		
-		//findByTiefenSucheRekursiv(g, 0, 4);
+		findByTiefenSucheRekursiv(g, 0, 4);
 		
-		// findByTiefenSuche(g, 0, 4);
-		findByBreitenSuche(g, 0, 4);
-		
+		//findByTiefenSuche(g, 0, 4);
 		//findByBreitenSuche(g, 0, 4);
 		//dijkstra(g, 0, 4);
-		
 		
 	}
 	
 	private static void findByTiefenSucheRekursiv(Graph g, int von, int nach) {
+		
 		boolean[] visited = new boolean[g.numVertices()];
 		int[] pred = new int[g.numVertices()];
 		
@@ -58,23 +58,21 @@ public class Main {
 			Graph g, int current, int nach, 
 			boolean[] visited, int[] pred) {
 		
-		boolean ok;
-		
 		if (current == nach) return true;
-		
+	
 		visited[current] = true;
 		
 		List<WeightedEdge> nachbarn = g.getEdges(current);
-				
 		for(WeightedEdge n: nachbarn) {
-			int next = n.vertex;
-			if (!visited[next]) {
-				pred[next] = current;
-				ok = _findByTiefenSucheRekursiv(g, next, nach, visited, pred);
-				if (ok) return true;
+			
+			if (!visited[n.vertex]) {
+				pred[n.vertex] = current;
+				
+				boolean found = _findByTiefenSucheRekursiv(g, n.vertex, nach, visited, pred);
+				if (found) return true;
+				
 			}
 		}
-		
 		return false;
 	}
 	
@@ -82,99 +80,111 @@ public class Main {
 	private static void findByTiefenSuche(
 					Graph g, int von, int nach) {
 		
+		Stack<Integer> nodes = new Stack<Integer>();
+	
 		boolean[] visited = new boolean[g.numVertices()];
 		int[] pred = new int[g.numVertices()];
+		boolean found = false;
 		
 		for(int i=0; i<pred.length; i++) {
-			pred[i] = -1;
+			pred[i] = -1; 
 		}
 		
-		Stack<Integer> stack = new Stack<Integer>(); 
+		nodes.push(von);
 		
-		// pred[5] = 0
-		// Wir besuchen 5 über 0
-		stack.push(von);
-		
-		while( !stack.isEmpty() ) {
-			
-			int current = stack.pop();
-			
+		while(!nodes.isEmpty()) {
+	
+			int current = nodes.pop();
 			visited[current] = true;
-			
+	
 			if (current == nach) {
+				found = true;
 				break;
 			}
 			
 			List<WeightedEdge> nachbarn = g.getEdges(current);
-			for(WeightedEdge n: nachbarn) {
-				if (!visited[n.vertex]) {
-					pred[n.vertex] = current;
-					stack.push(n.vertex);
+			for(WeightedEdge nachbar: nachbarn) {
+				if (!visited[nachbar.vertex]) {
+					pred[nachbar.vertex] = current;
+					nodes.push(nachbar.vertex);
 				}
 			}
-		
 		}
 		
-		
-		for(int i=0; i<pred.length; i++) {
-			System.out.println(i + " über " + pred[i]);
+		if (found) {
+			// Route ausgeben
+			for(int i=0; i<pred.length; i++) {
+				System.out.println(i + " über " + pred[i]);
+			}
 		}
-		
+		else {
+			System.out.println("Keine Verbindung gefunden");
+		}
 		
 	}
 	
-
-	
-	
-	
-	
-	private static void findByBreitenSuche(
-			Graph g, int von, int nach) {
+	private static int nextVertex(int[] dist, boolean[] visited) {
 		
-		boolean[] visited = new boolean[g.numVertices()];
+		int minValue = 99999;
+		int minIndex = -1;
+		
+		for(int i=0; i<dist.length; i++) {
+			if (!visited[i] && dist[i] < minValue) {
+				minValue = dist[i];
+				minIndex = i;
+			}
+		}
+		return minIndex;
+	}
+	
+	// Variante ohne Heap für dichte Graphen
+	private static void dijkstra2(Graph g, int von, int nach) {
+		
 		int[] pred = new int[g.numVertices()];
+		int[] dist = new int[g.numVertices()];
+		boolean[] visited = new boolean[g.numVertices()];
 		
-		for(int i=0; i<pred.length; i++) {
+		for(int i=0; i<dist.length; i++) {
+			dist[i] = 99999;
 			pred[i] = -1;
 		}
+		dist[von] = 0;
 		
-		ArrayDeque<Integer> queue = new ArrayDeque<Integer>();
-		
-		// pred[5] = 0
-		// Wir besuchen 5 über 0
-		queue.add(von);
-		
-		OUTER: while( !queue.isEmpty() ) {
+		while(true) {
+			int curIndex = nextVertex(dist, visited);
+			if (curIndex == -1) break;
 			
-			int current = queue.poll();
+			visited[curIndex] = true;
 			
-			visited[current] = true;
-			
-			if (current == nach) {
-				break;
-			}
-			
-			List<WeightedEdge> nachbarn = g.getEdges(current);
-			for(WeightedEdge n: nachbarn) {
-				if (!visited[n.vertex]) {
-					pred[n.vertex] = current;
-					if (n.vertex == nach) {
-						break OUTER;
-					}
-					queue.add(n.vertex);
+			List<WeightedEdge> nachbarn = g.getEdges(curIndex);
+			for(WeightedEdge nachbar: nachbarn) {
+				int distBisHier = dist[curIndex];
+				int distZumNachbar = nachbar.weight;
+				
+				int distInsg = distBisHier + distZumNachbar;
+				
+				if (dist[nachbar.vertex] > distInsg) {
+					dist[nachbar.vertex] = distInsg;
+					pred[nachbar.vertex] = curIndex;
+					
 				}
 			}
-		
 		}
 		
-		
+		// Pred ausgeben
 		for(int i=0; i<pred.length; i++) {
 			System.out.println(i + " über " + pred[i]);
 		}
-
-
+		
+		// Way ausgeben
+		System.out.println();
+		ArrayList<Integer> way = predToWay(pred, von, nach);
+		for(int vertexNumber: way) {
+			System.out.print(vertexNumber + " ");
+		}
+		System.out.println();
 	}
-
+	
 	
 	private static ArrayList<Integer> predToWay(int[] pred, int from, int to) {
 		
@@ -249,5 +259,50 @@ public class Main {
 	}
 	
 	
+	private static void findByBreitenSuche(
+			Graph g, int von, int nach) {
+	
+	ArrayDeque<Integer> nodes = new ArrayDeque<Integer>();
+	
+	boolean[] visited = new boolean[g.numVertices()];
+	int[] pred = new int[g.numVertices()];
+	boolean found = false;
+	
+	for(int i=0; i<pred.length; i++) {
+		pred[i] = -1; 
+	}
+	
+	nodes.add(von);
+	
+	outer: while(!nodes.isEmpty()) {
+	
+		int current = nodes.poll();
+		visited[current] = true;
+	
+		List<WeightedEdge> nachbarn = g.getEdges(current);
+		for(WeightedEdge nachbar: nachbarn) {
+			if (!visited[nachbar.vertex]) {
+				nodes.add(nachbar.vertex);
+				pred[nachbar.vertex] = current;
+				
+				if (nachbar.vertex == nach) {
+					found = true;
+					break outer;
+				}
+			}
+		}
+}
+
+if (found) {
+	// Route ausgeben
+	for(int i=0; i<pred.length; i++) {
+		System.out.println(i + " über " + pred[i]);
+	}
+}
+else {
+	System.out.println("Keine Verbindung gefunden");
+}
+
+}
 
 }
